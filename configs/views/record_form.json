@@ -1,0 +1,90 @@
+{
+    "callback_id": "hydration__record_form",
+    "title": {
+        "type": "plain_text",
+        "text": "Record Hydration"
+    },
+    "submit": {
+        "type": "plain_text",
+        "text": "Submit"
+    },
+    "blocks": [
+        {
+            "type": "input",
+            "block_id": "drink",
+            "element": {
+                "type": "plain_text_input",
+                "action_id": "drink",
+                "placeholder": {
+                    "type": "plain_text",
+                    "text": "What did you drink?"
+                }
+            },
+            "label": {
+                "type": "plain_text",
+                "text": "Drink"
+            }
+        },
+        {
+            "type": "input",
+            "block_id": "amount",
+            "element": {
+                "type": "static_select",
+                "action_id": "amount",
+                "placeholder": {
+                    "type": "plain_text",
+                    "text": "Select an item",
+                    "emoji": true
+                },
+                "options": [
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "100ml",
+                            "emoji": true
+                        },
+                        "value": "100"
+                    },
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "200ml",
+                            "emoji": true
+                        },
+                        "value": "200"
+                    },
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "300ml",
+                            "emoji": true
+                        },
+                        "value": "300"
+                    },
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "400ml",
+                            "emoji": true
+                        },
+                        "value": "400"
+                    },
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "500ml",
+                            "emoji": true
+                        },
+                        "value": "500"
+                    }
+                ]
+            },
+            "label": {
+                "type": "plain_text",
+                "text": "Amount of water",
+                "emoji": true
+            }
+        }
+    ],
+    "type": "modal"
+}

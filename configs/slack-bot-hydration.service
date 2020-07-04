@@ -1,0 +1,11 @@
+[Unit]
+Description = Slack Bot Hydration Server
+
+[Service]
+Type = simple
+ExecStart = /path/to/command/slack_bot_hydration -c /path/to/configs
+KillMode = process
+Restart = always
+
+[Install]
+WantedBy = multi-user.target

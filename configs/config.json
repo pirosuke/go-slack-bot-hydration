@@ -1,0 +1,16 @@
+{
+    "log_dir": "/path/to/log/dir",
+    "slack": {
+        "token": "xxxx-slack-bot-token"
+    },
+    "db": {
+        "client": "postgresql",
+        "connection": {
+            "host": "localhost",
+            "port": 5432,
+            "database": "slack_bot",
+            "user":     "username",
+            "password": "password"
+        }
+    }
+}
