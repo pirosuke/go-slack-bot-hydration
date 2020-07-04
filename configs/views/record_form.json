@@ -2,11 +2,11 @@
     "callback_id": "hydration__record_form",
     "title": {
         "type": "plain_text",
-        "text": "Record Hydration"
+        "text": "水分摂取量記録"
     },
     "submit": {
         "type": "plain_text",
-        "text": "Submit"
+        "text": "記録する"
     },
     "blocks": [
         {
@@ -17,12 +17,12 @@
                 "action_id": "drink",
                 "placeholder": {
                     "type": "plain_text",
-                    "text": "What did you drink?"
+                    "text": "何飲んだ？"
                 }
             },
             "label": {
                 "type": "plain_text",
-                "text": "Drink"
+                "text": "飲み物の種類"
             }
         },
         {
@@ -33,7 +33,7 @@
                 "action_id": "amount",
                 "placeholder": {
                     "type": "plain_text",
-                    "text": "Select an item",
+                    "text": "選択してください",
                     "emoji": true
                 },
                 "options": [
@@ -81,7 +81,7 @@
             },
             "label": {
                 "type": "plain_text",
-                "text": "Amount of water",
+                "text": "摂取量",
                 "emoji": true
             }
         }

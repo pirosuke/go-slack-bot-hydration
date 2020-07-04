@@ -34,11 +34,11 @@ func (repo *SlackRepository) PostHydrationAddResult(userName string, channel str
 	contentList := []slack.ContentBlock{
 		{
 			Type: "mrkdwn",
-			Text: "*Drink:*\n" + hydration.Drink,
+			Text: "*飲んだもの:*\n" + hydration.Drink,
 		},
 		{
 			Type: "mrkdwn",
-			Text: "*Amount:*\n" + strconv.FormatInt(hydration.Amount, 10) + "ml",
+			Text: "*摂取量:*\n" + strconv.FormatInt(hydration.Amount, 10) + "ml",
 		},
 	}
 
