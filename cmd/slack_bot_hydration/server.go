@@ -95,7 +95,7 @@ func main() {
 		return gateway(c, appConfig, configsDirPath)
 	})
 
-	e.Logger.Fatal(e.Start(":18081"))
+	e.Logger.Fatal(e.Start(appConfig.ServerHost))
 }
 
 // SetUp initializes App

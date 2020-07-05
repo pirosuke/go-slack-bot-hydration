@@ -44,7 +44,7 @@ func (repo *HydrationPgRepository) Add(hydration models.Hydration) error {
 // FetchDailyAmount gets summary of today's total drink amount.
 func (repo *HydrationPgRepository) FetchDailyAmount(userName string) int64 {
 	var totalAmount int64
-	err := repo.conn.QueryRow(context.Background(), "select sum(amount) from hydrations where username = $1 and modified::date = 'today'::date", userName).Scan(&totalAmount)
+	err := repo.conn.QueryRow(context.Background(), "select sum(amount) from hydrations where username = $1 and modified::date = now()::date", userName).Scan(&totalAmount)
 	if err != nil {
 		fmt.Println(err)
 	}

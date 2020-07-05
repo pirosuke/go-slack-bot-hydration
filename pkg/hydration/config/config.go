@@ -9,6 +9,7 @@ type (
 	// Config describes global server config.
 	Config struct {
 		Db         database.DbConfig `json:"db"`
+		ServerHost string            `json:"host"`
 		LogDirPath string            `json:"log_dir"`
 		Slack      slack.Config      `json:"slack"`
 	}

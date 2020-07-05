@@ -1,4 +1,5 @@
 {
+    "host": ":18081",
     "log_dir": "/path/to/log/dir",
     "slack": {
         "token": "xxxx-slack-bot-token"
