@@ -147,6 +147,8 @@ func gateway(c echo.Context, appConfig config.Config, configsDirPath string) err
 		iCallbackID, _ = jsonpointer.Get(payload, "/callback_id")
 	case "view_submission":
 		iCallbackID, _ = jsonpointer.Get(payload, "/view/callback_id")
+	case "block_actions":
+		iCallbackID, _ = jsonpointer.Get(payload, "/actions/0/action_id")
 	}
 
 	callbackID := iCallbackID.(string)
@@ -156,6 +158,10 @@ func gateway(c echo.Context, appConfig config.Config, configsDirPath string) err
 			return HandleOpenHydrationForm(c, appConfig, configsDirPath, payload)
 		case "hydration__record_form":
 			return HandleHydrationFormSubmission(c, appConfig, configsDirPath, payload)
+		case "hydration__edit_form":
+			return HandleOpenHydrationEditForm(c, appConfig, configsDirPath, payload)
+		case "hydration__delete_drink":
+			return HandleHydrationDelete(c, appConfig, configsDirPath, payload)
 		default:
 			c.Echo().Logger.Warn("Unrecognized callbackID:", callbackID)
 		}
@@ -206,13 +212,18 @@ func HandleHydrationFormSubmission(c echo.Context, appConfig config.Config, conf
 			Modified: time.Now(),
 		}
 
-		err := repo.Add(hydration)
+		hydrationID, err := repo.Add(hydration)
 		if err != nil {
 			c.Echo().Logger.Error(err)
 			return
 		}
+		hydration.ID = hydrationID
 
-		dailyAmount := repo.FetchDailyAmount(userName)
+		dailyAmount, err := repo.FetchDailyAmount(userName)
+		if err != nil {
+			c.Echo().Logger.Error(err)
+			return
+		}
 
 		slackRepo := &repositories.SlackRepository{
 			Token:        appConfig.Slack.Token,
@@ -223,6 +234,60 @@ func HandleHydrationFormSubmission(c echo.Context, appConfig config.Config, conf
 		if err != nil {
 			c.Echo().Logger.Error(err)
 			return
+		}
+	}()
+
+	return c.String(http.StatusOK, "")
+}
+
+// HandleOpenHydrationEditForm opens hydration edit form modal.
+func HandleOpenHydrationEditForm(c echo.Context, appConfig config.Config, configsDirPath string, payload interface{}) error {
+	/*iTriggerID, _ := jsonpointer.Get(payload, "/trigger_id")
+	triggerID := iTriggerID.(string)
+
+	iHydrationID, _ := jsonpointer.Get(payload, "/actions/0/value")
+	sHydrationID, _ := iHydrationID.(string)
+	hydrationID, _ := strconv.ParseInt(sHydrationID, 10, 64)*/
+
+	return c.String(http.StatusOK, "")
+}
+
+// HandleHydrationDelete deletes hydration and deletes message.
+func HandleHydrationDelete(c echo.Context, appConfig config.Config, configsDirPath string, payload interface{}) error {
+
+	iHydrationID, _ := jsonpointer.Get(payload, "/actions/0/value")
+	sHydrationID, _ := iHydrationID.(string)
+	hydrationID, _ := strconv.ParseInt(sHydrationID, 10, 64)
+
+	iUserName, _ := jsonpointer.Get(payload, "/user/username")
+	userName, _ := iUserName.(string)
+
+	iMessageTS, _ := jsonpointer.Get(payload, "/container/message_ts")
+	messageTS, _ := iMessageTS.(string)
+
+	iChannel, _ := jsonpointer.Get(payload, "/container/channel_id")
+	channel, _ := iChannel.(string)
+
+	hydration := models.Hydration{
+		ID:       hydrationID,
+		Username: userName,
+	}
+
+	go func() {
+		err := repo.Delete(hydration)
+		if err != nil {
+			c.Echo().Logger.Error(err)
+			return
+		}
+
+		slackRepo := &repositories.SlackRepository{
+			Token:        appConfig.Slack.Token,
+			ViewsDirPath: filepath.Join(configsDirPath, "views"),
+		}
+
+		_, err = slackRepo.DeleteMessage(channel, messageTS)
+		if err != nil {
+			c.Echo().Logger.Error(err)
 		}
 	}()
 

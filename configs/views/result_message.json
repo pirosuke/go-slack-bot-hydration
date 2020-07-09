@@ -1,0 +1,51 @@
+[
+    {
+        "type": "section",
+        "text": {
+            "type": "mrkdwn",
+            "text": "@{{userName}} が飲み物を飲みました\n本日の合計量は {{dailyAmount}}ml です"
+        }
+    },
+    {
+        "type": "section",
+        "fields": [
+            {
+                "type": "mrkdwn",
+                "text": "*飲んだもの:*\n{{drink}}"
+            },
+            {
+                "type": "mrkdwn",
+                "text": "*摂取量:*\n{{amount}}ml"
+            }
+        ]
+    },
+    {
+        "type": "divider"
+    },
+    {
+        "type": "actions",
+        "elements": [
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "修正",
+                    "emoji": true
+                },
+                "action_id": "hydration__edit_form",
+                "value": "{{hydrationID}}"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "削除",
+                    "emoji": true
+                },
+                "style": "danger",
+                "action_id": "hydration__delete_drink",
+                "value": "{{hydrationID}}"
+            }
+        ]
+    }
+]

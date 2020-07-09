@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	pgx "github.com/jackc/pgx/v4"
@@ -29,25 +28,42 @@ func (repo *HydrationPgRepository) Close() {
 }
 
 // Add inserts hydration data.
-func (repo *HydrationPgRepository) Add(hydration models.Hydration) error {
-	_, err := repo.conn.Exec(context.Background(),
-		"insert into hydrations(username, drink, amount, modified) values($1, $2, $3, $4)",
+func (repo *HydrationPgRepository) Add(hydration models.Hydration) (int64, error) {
+	var hydrationID int64
+	err := repo.conn.QueryRow(context.Background(),
+		"insert into hydrations(username, drink, amount, modified) values($1, $2, $3, $4) returning id",
 		hydration.Username,
 		hydration.Drink,
 		hydration.Amount,
 		hydration.Modified,
-	)
+	).Scan(&hydrationID)
 
-	return err
+	return hydrationID, err
 }
 
 // FetchDailyAmount gets summary of today's total drink amount.
-func (repo *HydrationPgRepository) FetchDailyAmount(userName string) int64 {
+func (repo *HydrationPgRepository) FetchDailyAmount(userName string) (int64, error) {
 	var totalAmount int64
 	err := repo.conn.QueryRow(context.Background(), "select sum(amount) from hydrations where username = $1 and modified::date = now()::date", userName).Scan(&totalAmount)
-	if err != nil {
-		fmt.Println(err)
-	}
 
-	return totalAmount
+	return totalAmount, err
+}
+
+// Update updates hydration data.
+func (repo *HydrationPgRepository) Update(hydration models.Hydration) error {
+	_, err := repo.conn.Exec(context.Background(), "update hydrations set drink = $1, amount = $2 where id = $3",
+		hydration.Drink,
+		hydration.Amount,
+		hydration.ID,
+	)
+	return err
+}
+
+// Delete deletes hydration data.
+func (repo *HydrationPgRepository) Delete(hydration models.Hydration) error {
+	_, err := repo.conn.Exec(context.Background(), "delete from hydrations where id = $1 and username = $2",
+		hydration.ID,
+		hydration.Username,
+	)
+	return err
 }

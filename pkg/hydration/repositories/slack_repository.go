@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/mattn/go-jsonpointer"
 	"github.com/pirosuke/slack-bot-hydration/internal/file"
@@ -23,31 +24,12 @@ type SlackRepository struct {
 func (repo *SlackRepository) PostHydrationAddResult(userName string, channel string, hydration models.Hydration, dailyAmount int64) ([]byte, error) {
 	var err error
 	var resp []byte
-	titleSection := slack.TextSectionBlock{
-		Type: "section",
-		Text: slack.ContentBlock{
-			Type: "mrkdwn",
-			Text: "@" + userName + " が飲み物を飲みました\n本日の合計量は " + strconv.FormatInt(dailyAmount, 10) + "ml です",
-		},
-	}
+	var requestParams, view interface{}
 
-	contentList := []slack.ContentBlock{
-		{
-			Type: "mrkdwn",
-			Text: "*飲んだもの:*\n" + hydration.Drink,
-		},
-		{
-			Type: "mrkdwn",
-			Text: "*摂取量:*\n" + strconv.FormatInt(hydration.Amount, 10) + "ml",
-		},
+	viewPath := filepath.Join(repo.ViewsDirPath, "result_message.json")
+	if !file.FileExists(viewPath) {
+		return resp, fmt.Errorf("View file does not exist: %s", viewPath)
 	}
-
-	contentSection := slack.FieldsSectionBlock{
-		Type:   "section",
-		Fields: contentList,
-	}
-
-	var requestParams interface{}
 
 	requestJSON := `{"channel": "", "blocks": []}`
 	err = json.Unmarshal([]byte(requestJSON), &requestParams)
@@ -55,18 +37,42 @@ func (repo *SlackRepository) PostHydrationAddResult(userName string, channel str
 		return resp, err
 	}
 
-	jsonpointer.Set(requestParams, "/channel", channel)
-	jsonpointer.Set(requestParams, "/blocks", []interface{}{
-		titleSection,
-		contentSection,
-	})
+	viewJSONTemplate, err := ioutil.ReadFile(viewPath)
+	if err != nil {
+		return resp, err
+	}
+
+	viewParams := map[string]string{
+		"hydrationID": strconv.FormatInt(hydration.ID, 10),
+		"userName":    hydration.Username,
+		"drink":       hydration.Drink,
+		"amount":      strconv.FormatInt(hydration.Amount, 10),
+		"dailyAmount": strconv.FormatInt(dailyAmount, 10),
+	}
+
+	viewJSON := replaceViewTemplateParams(string(viewJSONTemplate), viewParams)
+
+	err = json.Unmarshal([]byte(viewJSON), &view)
+	if err != nil {
+		return resp, err
+	}
+
+	err = jsonpointer.Set(requestParams, "/blocks", view)
+	if err != nil {
+		return resp, err
+	}
+
+	err = jsonpointer.Set(requestParams, "/channel", channel)
+	if err != nil {
+		return resp, err
+	}
 
 	requestParamsJSON, err := json.Marshal(requestParams)
 	if err != nil {
 		return resp, err
 	}
 
-	//fmt.Println(string(requestParamsJSON))
+	fmt.Println(string(requestParamsJSON))
 
 	resp, err = slack.PostJSON(repo.Token, "chat.postMessage", string(requestParamsJSON))
 
@@ -120,4 +126,49 @@ func (repo *SlackRepository) OpenHydrationAddView(triggerID string) ([]byte, err
 	//fmt.Println(string(resp))
 
 	return resp, err
+}
+
+// DeleteMessage deletes message.
+func (repo *SlackRepository) DeleteMessage(channel string, ts string) ([]byte, error) {
+	var err error
+	var resp []byte
+	var requestParams interface{}
+
+	requestJSON := `{"channel": "", "ts": ""}`
+	err = json.Unmarshal([]byte(requestJSON), &requestParams)
+	if err != nil {
+		return resp, err
+	}
+
+	err = jsonpointer.Set(requestParams, "/channel", channel)
+	if err != nil {
+		return resp, err
+	}
+
+	err = jsonpointer.Set(requestParams, "/ts", ts)
+	if err != nil {
+		return resp, err
+	}
+
+	requestParamsJSON, err := json.Marshal(requestParams)
+	if err != nil {
+		return resp, err
+	}
+
+	//fmt.Println(string(requestParamsJSON))
+	resp, err = slack.PostJSON(repo.Token, "chat.delete", string(requestParamsJSON))
+	//fmt.Println(string(resp))
+
+	return resp, err
+
+}
+
+func replaceViewTemplateParams(srcText string, params map[string]string) string {
+	destText := srcText
+
+	for k, v := range params {
+		destText = strings.ReplaceAll(destText, "{{"+k+"}}", v)
+	}
+
+	return destText
 }

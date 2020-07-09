@@ -22,24 +22,6 @@ type (
 		Text    string `json:"text"`
 		Blocks  string `json:"blocks"`
 	}
-
-	//FieldsSectionBlock describes section block for slack message.
-	FieldsSectionBlock struct {
-		Type   string         `json:"type"`
-		Fields []ContentBlock `json:"fields"`
-	}
-
-	//TextSectionBlock describes section block for slack message.
-	TextSectionBlock struct {
-		Type string       `json:"type"`
-		Text ContentBlock `json:"text"`
-	}
-
-	//ContentBlock describes content block for slack message.
-	ContentBlock struct {
-		Type string `json:"type"`
-		Text string `json:"text"`
-	}
 )
 
 /*
