@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"strconv"
+	"time"
 
 	pgx "github.com/jackc/pgx/v4"
 	"github.com/pirosuke/slack-bot-hydration/internal/database"
@@ -41,6 +42,37 @@ func (repo *HydrationPgRepository) Add(hydration models.Hydration) (int64, error
 	return hydrationID, err
 }
 
+// FetchOne fetches one hydration data.
+func (repo *HydrationPgRepository) FetchOne(hydrationID int64) (models.Hydration, error) {
+	var hydration models.Hydration
+	var userName string
+	var drink string
+	var amount int64
+	var modified time.Time
+	err := repo.conn.QueryRow(context.Background(), "select username, drink, amount, modified from hydrations where id = $1",
+		hydrationID,
+	).Scan(
+		&userName,
+		&drink,
+		&amount,
+		&modified,
+	)
+
+	if err != nil {
+		return hydration, err
+	}
+
+	hydration = models.Hydration{
+		ID:       hydrationID,
+		Username: userName,
+		Drink:    drink,
+		Amount:   amount,
+		Modified: modified,
+	}
+
+	return hydration, nil
+}
+
 // FetchDailyAmount gets summary of today's total drink amount.
 func (repo *HydrationPgRepository) FetchDailyAmount(userName string) (int64, error) {
 	var totalAmount int64
@@ -51,10 +83,12 @@ func (repo *HydrationPgRepository) FetchDailyAmount(userName string) (int64, err
 
 // Update updates hydration data.
 func (repo *HydrationPgRepository) Update(hydration models.Hydration) error {
-	_, err := repo.conn.Exec(context.Background(), "update hydrations set drink = $1, amount = $2 where id = $3",
+	_, err := repo.conn.Exec(context.Background(), "update hydrations set drink = $1, amount = $2, modified = $3 where id = $4 and username = $5",
 		hydration.Drink,
 		hydration.Amount,
+		hydration.Modified,
 		hydration.ID,
+		hydration.Username,
 	)
 	return err
 }

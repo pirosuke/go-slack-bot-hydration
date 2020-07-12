@@ -1,0 +1,20 @@
+{
+    "title": {
+        "type": "plain_text",
+        "text": "{{title}}"
+    },
+    "close": {
+        "type": "plain_text",
+        "text": "閉じる"
+    },
+    "blocks": [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "{{text}}"
+            }
+        }
+    ],
+    "type": "modal"
+}

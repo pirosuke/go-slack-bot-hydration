@@ -1,5 +1,5 @@
 {
-    "callback_id": "hydration__record_form",
+    "callback_id": "{{callbackID}}",
     "title": {
         "type": "plain_text",
         "text": "水分摂取量記録"
@@ -8,6 +8,7 @@
         "type": "plain_text",
         "text": "記録する"
     },
+    "private_metadata": "{{metadata}}",
     "blocks": [
         {
             "type": "input",
@@ -18,7 +19,8 @@
                 "placeholder": {
                     "type": "plain_text",
                     "text": "何飲んだ？"
-                }
+                },
+                "initial_value": "{{initialDrink}}"
             },
             "label": {
                 "type": "plain_text",
@@ -35,6 +37,14 @@
                     "type": "plain_text",
                     "text": "選択してください",
                     "emoji": true
+                },
+                "initial_option": {
+                    "text": {
+                        "type": "plain_text",
+                        "text": "{{initialAmount}}ml",
+                        "emoji": true
+                    },
+                    "value": "{{initialAmount}}"
                 },
                 "options": [
                     {

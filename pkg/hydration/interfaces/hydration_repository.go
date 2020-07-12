@@ -13,6 +13,8 @@ type HydrationRepository interface {
 	Close()
 	// Add inserts hydration data.
 	Add(hydration models.Hydration) (int64, error)
+	// FetchOne fetches one hydration data.
+	FetchOne(hydrationID int64) (models.Hydration, error)
 	// FetchDailyAmount gets summary of today's total drink amount.
 	FetchDailyAmount(userName string) (int64, error)
 	// Update updates hydration data.

@@ -32,7 +32,7 @@
                     "text": "修正",
                     "emoji": true
                 },
-                "action_id": "hydration__edit_form",
+                "action_id": "hydration__update_drink",
                 "value": "{{hydrationID}}"
             },
             {
@@ -44,7 +44,26 @@
                 },
                 "style": "danger",
                 "action_id": "hydration__delete_drink",
-                "value": "{{hydrationID}}"
+                "value": "{{hydrationID}}",
+                "confirm": {
+                    "title": {
+                        "type": "plain_text",
+                        "text": "削除確認"
+                    },
+                    "text": {
+                        "type": "plain_text",
+                        "text": "記録を削除しますか？"
+                    },
+                    "confirm": {
+                        "type": "plain_text",
+                        "text": "削除する"
+                    },
+                    "deny": {
+                        "type": "plain_text",
+                        "text": "キャンセル"
+                    },
+                    "style": "danger"
+                }
             }
         ]
     }

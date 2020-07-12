@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	echo "github.com/labstack/echo/v4"
@@ -157,9 +158,11 @@ func gateway(c echo.Context, appConfig config.Config, configsDirPath string) err
 		case "hydration__record_drink":
 			return HandleOpenHydrationForm(c, appConfig, configsDirPath, payload)
 		case "hydration__record_form":
-			return HandleHydrationFormSubmission(c, appConfig, configsDirPath, payload)
-		case "hydration__edit_form":
-			return HandleOpenHydrationEditForm(c, appConfig, configsDirPath, payload)
+			return HandleHydrationFormAddSubmission(c, appConfig, configsDirPath, payload)
+		case "hydration__update_drink":
+			return HandleOpenHydrationUpdateForm(c, appConfig, configsDirPath, payload)
+		case "hydration__update_form":
+			return HandleHydrationFormUpdateSubmission(c, appConfig, configsDirPath, payload)
 		case "hydration__delete_drink":
 			return HandleHydrationDelete(c, appConfig, configsDirPath, payload)
 		default:
@@ -191,8 +194,8 @@ func HandleOpenHydrationForm(c echo.Context, appConfig config.Config, configsDir
 	return c.String(http.StatusOK, "Ok")
 }
 
-// HandleHydrationFormSubmission saves hydration and posts result message.
-func HandleHydrationFormSubmission(c echo.Context, appConfig config.Config, configsDirPath string, payload interface{}) error {
+// HandleHydrationFormAddSubmission saves hydration and posts result message.
+func HandleHydrationFormAddSubmission(c echo.Context, appConfig config.Config, configsDirPath string, payload interface{}) error {
 
 	iDrink, _ := jsonpointer.Get(payload, "/view/state/values/drink/drink/value")
 	iAmount, _ := jsonpointer.Get(payload, "/view/state/values/amount/amount/selected_option/value")
@@ -240,14 +243,101 @@ func HandleHydrationFormSubmission(c echo.Context, appConfig config.Config, conf
 	return c.String(http.StatusOK, "")
 }
 
-// HandleOpenHydrationEditForm opens hydration edit form modal.
-func HandleOpenHydrationEditForm(c echo.Context, appConfig config.Config, configsDirPath string, payload interface{}) error {
-	/*iTriggerID, _ := jsonpointer.Get(payload, "/trigger_id")
+// HandleOpenHydrationUpdateForm opens hydration edit form modal.
+func HandleOpenHydrationUpdateForm(c echo.Context, appConfig config.Config, configsDirPath string, payload interface{}) error {
+	iTriggerID, _ := jsonpointer.Get(payload, "/trigger_id")
 	triggerID := iTriggerID.(string)
+
+	iUserName, _ := jsonpointer.Get(payload, "/user/username")
+	userName, _ := iUserName.(string)
 
 	iHydrationID, _ := jsonpointer.Get(payload, "/actions/0/value")
 	sHydrationID, _ := iHydrationID.(string)
-	hydrationID, _ := strconv.ParseInt(sHydrationID, 10, 64)*/
+	hydrationID, _ := strconv.ParseInt(sHydrationID, 10, 64)
+
+	iMessageTS, _ := jsonpointer.Get(payload, "/container/message_ts")
+	iChannel, _ := jsonpointer.Get(payload, "/container/channel_id")
+	messageTS, _ := iMessageTS.(string)
+	channel, _ := iChannel.(string)
+
+	go func() {
+		hydration, err := repo.FetchOne(hydrationID)
+		if err != nil {
+			c.Echo().Logger.Error(err)
+			return
+		}
+
+		slackRepo := &repositories.SlackRepository{
+			Token:        appConfig.Slack.Token,
+			ViewsDirPath: filepath.Join(configsDirPath, "views"),
+		}
+
+		if hydration.Username == userName {
+			_, err = slackRepo.OpenHydrationUpdateView(triggerID, channel, messageTS, hydration)
+			if err != nil {
+				c.Echo().Logger.Error(err)
+			}
+		} else {
+			_, err = slackRepo.ShowAlert(triggerID, "更新できません", "この記録を更新する権限がありません")
+		}
+	}()
+
+	return c.String(http.StatusOK, "")
+}
+
+// HandleHydrationFormUpdateSubmission saves hydration and posts result message.
+func HandleHydrationFormUpdateSubmission(c echo.Context, appConfig config.Config, configsDirPath string, payload interface{}) error {
+
+	iMetadata, _ := jsonpointer.Get(payload, "/view/private_metadata")
+	iDrink, _ := jsonpointer.Get(payload, "/view/state/values/drink/drink/value")
+	iAmount, _ := jsonpointer.Get(payload, "/view/state/values/amount/amount/selected_option/value")
+	iUserName, _ := jsonpointer.Get(payload, "/user/username")
+
+	metadata, _ := iMetadata.(string)
+	metadataList := strings.Split(metadata, "-")
+
+	channel := metadataList[0]
+	messageTS := metadataList[1]
+	hydrationID, _ := strconv.ParseInt(metadataList[2], 10, 64)
+
+	drink, _ := iDrink.(string)
+	amount, _ := iAmount.(string)
+	userName, _ := iUserName.(string)
+
+	intAmount, _ := strconv.ParseInt(amount, 10, 64)
+
+	go func() {
+		hydration := models.Hydration{
+			ID:       hydrationID,
+			Username: userName,
+			Drink:    drink,
+			Amount:   intAmount,
+			Modified: time.Now(),
+		}
+
+		err := repo.Update(hydration)
+		if err != nil {
+			c.Echo().Logger.Error(err)
+			return
+		}
+
+		dailyAmount, err := repo.FetchDailyAmount(userName)
+		if err != nil {
+			c.Echo().Logger.Error(err)
+			return
+		}
+
+		slackRepo := &repositories.SlackRepository{
+			Token:        appConfig.Slack.Token,
+			ViewsDirPath: filepath.Join(configsDirPath, "views"),
+		}
+
+		_, err = slackRepo.PostHydrationUpdateResult(userName, channel, messageTS, hydration, dailyAmount)
+		if err != nil {
+			c.Echo().Logger.Error(err)
+			return
+		}
+	}()
 
 	return c.String(http.StatusOK, "")
 }
@@ -268,13 +358,8 @@ func HandleHydrationDelete(c echo.Context, appConfig config.Config, configsDirPa
 	iChannel, _ := jsonpointer.Get(payload, "/container/channel_id")
 	channel, _ := iChannel.(string)
 
-	hydration := models.Hydration{
-		ID:       hydrationID,
-		Username: userName,
-	}
-
 	go func() {
-		err := repo.Delete(hydration)
+		hydration, err := repo.FetchOne(hydrationID)
 		if err != nil {
 			c.Echo().Logger.Error(err)
 			return
@@ -285,10 +370,23 @@ func HandleHydrationDelete(c echo.Context, appConfig config.Config, configsDirPa
 			ViewsDirPath: filepath.Join(configsDirPath, "views"),
 		}
 
-		_, err = slackRepo.DeleteMessage(channel, messageTS)
-		if err != nil {
-			c.Echo().Logger.Error(err)
+		if hydration.Username == userName {
+			err = repo.Delete(hydration)
+			if err != nil {
+				c.Echo().Logger.Error(err)
+				return
+			}
+
+			_, err = slackRepo.DeleteMessage(channel, messageTS)
+			if err != nil {
+				c.Echo().Logger.Error(err)
+			}
+		} else {
+			iTriggerID, _ := jsonpointer.Get(payload, "/trigger_id")
+			triggerID := iTriggerID.(string)
+			_, err = slackRepo.ShowAlert(triggerID, "削除できません", "この記録を削除する権限がありません")
 		}
+
 	}()
 
 	return c.String(http.StatusOK, "")
