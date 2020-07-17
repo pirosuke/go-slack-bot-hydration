@@ -29,6 +29,16 @@
                 "type": "button",
                 "text": {
                     "type": "plain_text",
+                    "text": "リピート",
+                    "emoji": true
+                },
+                "action_id": "hydration__repeat_drink",
+                "value": "{{hydrationID}}"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
                     "text": "修正",
                     "emoji": true
                 },

@@ -165,6 +165,8 @@ func gateway(c echo.Context, appConfig config.Config, configsDirPath string) err
 			return HandleHydrationFormUpdateSubmission(c, appConfig, configsDirPath, payload)
 		case "hydration__delete_drink":
 			return HandleHydrationDelete(c, appConfig, configsDirPath, payload)
+		case "hydration__repeat_drink":
+			return HandleHydrationRepeat(c, appConfig, configsDirPath, payload)
 		default:
 			c.Echo().Logger.Warn("Unrecognized callbackID:", callbackID)
 		}
@@ -385,6 +387,59 @@ func HandleHydrationDelete(c echo.Context, appConfig config.Config, configsDirPa
 			iTriggerID, _ := jsonpointer.Get(payload, "/trigger_id")
 			triggerID := iTriggerID.(string)
 			_, err = slackRepo.ShowAlert(triggerID, "削除できません", "この記録を削除する権限がありません")
+		}
+
+	}()
+
+	return c.String(http.StatusOK, "")
+}
+
+// HandleHydrationRepeat adds same hydration from selected message.
+func HandleHydrationRepeat(c echo.Context, appConfig config.Config, configsDirPath string, payload interface{}) error {
+
+	iHydrationID, _ := jsonpointer.Get(payload, "/actions/0/value")
+	sHydrationID, _ := iHydrationID.(string)
+	hydrationID, _ := strconv.ParseInt(sHydrationID, 10, 64)
+
+	iUserName, _ := jsonpointer.Get(payload, "/user/username")
+	userName, _ := iUserName.(string)
+
+	go func() {
+		exHydration, err := repo.FetchOne(hydrationID)
+		if err != nil {
+			c.Echo().Logger.Error(err)
+			return
+		}
+
+		hydration := models.Hydration{
+			Username: userName,
+			Drink:    exHydration.Drink,
+			Amount:   exHydration.Amount,
+			Modified: time.Now(),
+		}
+
+		hydrationID, err := repo.Add(hydration)
+		if err != nil {
+			c.Echo().Logger.Error(err)
+			return
+		}
+		hydration.ID = hydrationID
+
+		dailyAmount, err := repo.FetchDailyAmount(userName)
+		if err != nil {
+			c.Echo().Logger.Error(err)
+			return
+		}
+
+		slackRepo := &repositories.SlackRepository{
+			Token:        appConfig.Slack.Token,
+			ViewsDirPath: filepath.Join(configsDirPath, "views"),
+		}
+
+		_, err = slackRepo.PostHydrationAddResult(userName, "#general", hydration, dailyAmount)
+		if err != nil {
+			c.Echo().Logger.Error(err)
+			return
 		}
 
 	}()
