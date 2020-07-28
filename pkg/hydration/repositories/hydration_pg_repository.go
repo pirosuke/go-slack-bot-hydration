@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"strconv"
+	"strings"
 	"time"
 
 	pgx "github.com/jackc/pgx/v4"
@@ -79,6 +80,63 @@ func (repo *HydrationPgRepository) FetchDailyAmount(userName string) (int64, err
 	err := repo.conn.QueryRow(context.Background(), "select sum(amount) from hydrations where username = $1 and modified::date = now()::date", userName).Scan(&totalAmount)
 
 	return totalAmount, err
+}
+
+// FetchWeeklyUsers returns user list with hydration record during this week.
+func (repo *HydrationPgRepository) FetchWeeklyUsers() ([]string, error) {
+	var userList []string
+
+	rows, err := repo.conn.Query(context.Background(), "select username from hydrations where modified >= now()::date - interval '7 days' group by username")
+	if err != nil {
+		return userList, err
+	}
+
+	for rows.Next() {
+		var userName string
+		err := rows.Scan(&userName)
+		if err != nil {
+			return userList, err
+		}
+		userList = append(userList, userName)
+	}
+
+	return userList, nil
+}
+
+// FetchWeeklySummary returns summary of weekly hydration.
+func (repo *HydrationPgRepository) FetchWeeklySummary(userName string) ([]models.DailyHydrationSummary, error) {
+	var resultList []models.DailyHydrationSummary
+
+	sql := []string{
+		"select ",
+		"extract(day from modified)::text as day ",
+		",sum(amount) as total_amount ",
+		"from hydrations ",
+		"where username = $1 ",
+		"and modified >= now()::date - interval '7 days' ",
+		"group by extract(day from modified) ",
+		"order by extract(day from modified)",
+	}
+
+	rows, err := repo.conn.Query(context.Background(), strings.Join(sql, " "), userName)
+	if err != nil {
+		return resultList, err
+	}
+
+	for rows.Next() {
+		var day string
+		var totalAmount int64
+		err := rows.Scan(&day, &totalAmount)
+		if err != nil {
+			return resultList, err
+		}
+		resultList = append(resultList, models.DailyHydrationSummary{
+			Day:         day,
+			TotalAmount: totalAmount,
+		})
+	}
+
+	return resultList, nil
 }
 
 // Update updates hydration data.

@@ -1,6 +1,7 @@
 {
     "host": ":18081",
     "log_dir": "/path/to/log/dir",
+    "plot_output_dir": "/path/to/plot/dir",
     "slack": {
         "token": "xxxx-slack-bot-token"
     },

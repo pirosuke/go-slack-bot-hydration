@@ -13,10 +13,14 @@ type HydrationRepository interface {
 	Close()
 	// Add inserts hydration data.
 	Add(hydration models.Hydration) (int64, error)
-	// FetchOne fetches one hydration data.
+	// FetchOne returns one hydration data.
 	FetchOne(hydrationID int64) (models.Hydration, error)
-	// FetchDailyAmount gets summary of today's total drink amount.
+	// FetchDailyAmount returns summary of today's total drink amount.
 	FetchDailyAmount(userName string) (int64, error)
+	// FetchWeeklyUsers returns user list with hydration record during this week.
+	FetchWeeklyUsers() ([]string, error)
+	// FetchWeeklySummary returns summary of weekly hydration.
+	FetchWeeklySummary(userName string) ([]models.DailyHydrationSummary, error)
 	// Update updates hydration data.
 	Update(hydration models.Hydration) error
 	// Delete deletes hydration data.

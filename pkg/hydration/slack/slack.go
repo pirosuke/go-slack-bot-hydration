@@ -1,6 +1,7 @@
 package slack
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -48,11 +49,29 @@ func PostMessage(token string, message Message) ([]byte, error) {
 /*
 PostJSON posts request to slack.
 */
-func PostJSON(token string, command string, paramJSON string) ([]byte, error) {
+func PostJSON(token string, command string, contentType string, paramJSON string) ([]byte, error) {
 
 	client := &http.Client{}
 	req, _ := http.NewRequest("POST", "https://slack.com/api/"+command, strings.NewReader(paramJSON))
-	req.Header.Add("Content-type", "application/json")
+	req.Header.Add("Content-type", contentType)
+	req.Header.Add("Authorization", "Bearer "+token)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return ioutil.ReadAll(resp.Body)
+}
+
+/*
+PostJSON posts request to slack.
+*/
+func PostBuffer(token string, command string, contentType string, params *bytes.Buffer) ([]byte, error) {
+
+	client := &http.Client{}
+	req, _ := http.NewRequest("POST", "https://slack.com/api/"+command, params)
+	req.Header.Add("Content-type", contentType)
 	req.Header.Add("Authorization", "Bearer "+token)
 
 	resp, err := client.Do(req)

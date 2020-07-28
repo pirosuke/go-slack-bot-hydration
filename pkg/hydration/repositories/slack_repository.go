@@ -1,9 +1,13 @@
 package repositories
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"mime/multipart"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -92,7 +96,7 @@ func (repo *SlackRepository) PostHydrationAddResult(userName string, channel str
 
 	fmt.Println(string(requestParamsJSON))
 
-	resp, err = slack.PostJSON(repo.Token, "chat.postMessage", string(requestParamsJSON))
+	resp, err = slack.PostJSON(repo.Token, "chat.postMessage", "application/json", string(requestParamsJSON))
 	fmt.Println(string(resp))
 
 	return resp, err
@@ -157,7 +161,7 @@ func (repo *SlackRepository) PostHydrationUpdateResult(userName string, channel 
 
 	fmt.Println(string(requestParamsJSON))
 
-	resp, err = slack.PostJSON(repo.Token, "chat.update", string(requestParamsJSON))
+	resp, err = slack.PostJSON(repo.Token, "chat.update", "application/json", string(requestParamsJSON))
 	fmt.Println(string(resp))
 
 	return resp, err
@@ -229,7 +233,53 @@ func (repo *SlackRepository) DeleteMessage(channel string, ts string) ([]byte, e
 	}
 
 	//fmt.Println(string(requestParamsJSON))
-	resp, err = slack.PostJSON(repo.Token, "chat.delete", string(requestParamsJSON))
+	resp, err = slack.PostJSON(repo.Token, "chat.delete", "application/json", string(requestParamsJSON))
+	//fmt.Println(string(resp))
+
+	return resp, err
+
+}
+
+// UploadFile uploads file.
+func (repo *SlackRepository) UploadFile(channel string, fileName string, fileType string, filePath string, message string) ([]byte, error) {
+	var err error
+	var resp []byte
+
+	fileReader, err := os.Open(filePath)
+	if err != nil {
+		return resp, err
+	}
+	defer fileReader.Close()
+
+	var requestParams bytes.Buffer
+	var fw io.Writer
+
+	writer := multipart.NewWriter(&requestParams)
+
+	fw, _ = writer.CreateFormField("token")
+	io.Copy(fw, strings.NewReader(repo.Token))
+
+	fw, _ = writer.CreateFormField("channels")
+	io.Copy(fw, strings.NewReader(channel))
+
+	fw, _ = writer.CreateFormField("filename")
+	io.Copy(fw, strings.NewReader(fileName))
+
+	fw, _ = writer.CreateFormField("filetype")
+	io.Copy(fw, strings.NewReader(fileType))
+
+	fw, _ = writer.CreateFormFile("file", fileReader.Name())
+	io.Copy(fw, fileReader)
+
+	if len(message) > 0 {
+		fw, _ = writer.CreateFormField("initial_comment")
+		io.Copy(fw, strings.NewReader(message))
+	}
+
+	writer.Close()
+
+	//fmt.Println(string(requestParamsJSON))
+	resp, err = slack.PostBuffer(repo.Token, "files.upload", writer.FormDataContentType(), &requestParams)
 	//fmt.Println(string(resp))
 
 	return resp, err
@@ -277,7 +327,7 @@ func (repo *SlackRepository) openView(triggerID string, viewPath string, viewPar
 	}
 
 	//fmt.Println(string(requestParamsJSON))
-	resp, err = slack.PostJSON(repo.Token, "views.open", string(requestParamsJSON))
+	resp, err = slack.PostJSON(repo.Token, "views.open", "application/json", string(requestParamsJSON))
 	//fmt.Println(string(resp))
 
 	return resp, err
